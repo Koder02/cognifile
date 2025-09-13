@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
-import { useDocuments } from '../../contexts/DocumentContext';
+import { useDocuments, Document } from '../../contexts/DocumentContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { AIService } from '../../services/AIService';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -10,7 +11,7 @@ interface UploadModalProps {
 
 export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
@@ -57,51 +58,72 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     setSelectedFile(file);
   };
 
-  const simulateProcessing = async () => {
-    setUploading(true);
+  const handleProcessing = async () => {
+    if (!selectedFile || !user) return;
+
+    
     setUploadStatus('processing');
-    
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    if (selectedFile && user) {
-      // Mock AI classification results
-      const categories = ['Finance', 'HR', 'Legal', 'Contracts', 'Technical Reports', 'Invoices'] as const;
-      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-      
-      const newDocument = {
+
+    try {
+      const aiService = AIService.getInstance();
+      const fileUrl = URL.createObjectURL(selectedFile);
+
+      // Extract text from the PDF
+      const text = await aiService.extractTextFromPDF(fileUrl);
+
+      // Classify the document if model is ready; otherwise fallback
+      const ready = await aiService.isReady();
+            interface Classification {
+        label: string;
+        score: number;
+      }
+      let classifications: Classification[] = [];
+      let topClassification = { label: 'Other', score: 0 };
+      if (ready) {
+        classifications = await aiService.classifyDocument(text);
+        topClassification = classifications[0] || topClassification;
+      } else {
+        console.warn('AI model not ready; skipping classification for uploaded file');
+      }
+
+      const newDocument: Document = {
         id: Date.now().toString(),
         title: selectedFile.name.replace(/\.[^/.]+$/, ''),
-        category: randomCategory,
+        category: topClassification.label,
         author: user.username,
         uploadDate: new Date().toISOString().split('T')[0],
-        fileType: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
-        fileName: selectedFile.name,
-        summary: `AI-generated summary for ${selectedFile.name}. This document has been automatically classified and processed using advanced machine learning algorithms.`,
-        entities: ['Entity 1', 'Entity 2', 'Key Term'],
-        content: 'Document content would be extracted here...',
-        uploaderId: user.id,
+        type: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
+        name: selectedFile.name,
+        summary: `AI-generated summary for ${selectedFile.name}.`,
+        entities: [],
+        content: text,
         size: `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB`,
-        tags: ['auto-classified', 'processed', 'new']
+        tags: ['newly-uploaded'],
+        path: fileUrl,
+        confidenceScore: topClassification.score,
+        classification: topClassification.label,
       };
-      
+
       addDocument(newDocument);
+
+      setUploadStatus('success');
+    } catch (error) {
+      console.error('Error processing document:', error);
+      setUploadStatus('error');
+    } finally {
+      
+      setTimeout(() => {
+        onClose();
+        setUploadStatus('idle');
+        setSelectedFile(null);
+      }, 2000);
     }
-    
-    setUploadStatus('success');
-    setUploading(false);
-    
-    setTimeout(() => {
-      onClose();
-      setUploadStatus('idle');
-      setSelectedFile(null);
-    }, 2000);
   };
 
   const reset = () => {
     setSelectedFile(null);
     setUploadStatus('idle');
-    setUploading(false);
+    
   };
 
   return (
@@ -185,7 +207,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                   Cancel
                 </button>
                 <button
-                  onClick={simulateProcessing}
+                  onClick={handleProcessing}
                   className="flex-1 px-4 py-2 bg-[#0C2C47] text-white rounded-lg hover:bg-[#1a3a57] transition-colors"
                 >
                   Process Document

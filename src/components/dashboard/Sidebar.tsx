@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, FolderOpen, Share2, Settings, ChevronDown, ChevronRight, FileText, DollarSign, Users, Scale, Contact as FileContract, Receipt, Menu, X } from 'lucide-react';
+import { Home, FolderOpen, Share2, Settings, ChevronDown, ChevronRight, FileText, DollarSign, Users, Scale, Contact as FileContract, Receipt, Menu, X, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
@@ -62,7 +62,7 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
             {!collapsed && (
               <div className="flex items-center">
                 <div className="bg-[#0C2C47] p-2 rounded-lg mr-3">
-                  <FileText className="h-6 w-6 text-white" />
+                  <FileText className="h-7 w-7 text-white" />
                 </div>
                 <h1 className="text-xl font-bold text-[#0C2C47]">Cognifile</h1>
               </div>
@@ -84,10 +84,18 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
         </div>
 
         <nav className="p-4 space-y-2 overflow-y-auto h-full pb-20">
-          <div className="space-y-1">
-            <button className="w-full flex items-center px-3 py-2 text-[#0C2C47] bg-[#E4F2EA] rounded-lg hover:bg-[#97D3CD] transition-colors">
-              <Home className="h-5 w-5" />
+          <div className="space-y-2">
+            <button className="w-full flex items-center px-3 py-2.5 text-[#0C2C47] bg-[#E4F2EA] rounded-lg hover:bg-[#97D3CD] transition-colors">
+              <Home className="h-6 w-6" />
               {!collapsed && <span className="ml-3 font-medium">Home</span>}
+            </button>
+            
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('openUploadModal'))}
+              className="w-full flex items-center px-3 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Upload className="h-6 w-6 text-green-600" />
+              {!collapsed && <span className="ml-3 font-medium">Upload Document</span>}
             </button>
             
             <div className="space-y-1">

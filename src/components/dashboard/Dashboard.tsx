@@ -12,8 +12,15 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Listen for custom event to open upload modal
+  React.useEffect(() => {
+    const handleOpenUpload = () => setIsUploadModalOpen(true);
+    window.addEventListener('openUploadModal', handleOpenUpload);
+    return () => window.removeEventListener('openUploadModal', handleOpenUpload);
+  }, []);
   
-  const { documents, searchDocuments, filterDocuments } = useDocuments();
+  const { documents, searchDocuments } = useDocuments();
   const { user } = useAuth();
 
   const getFilteredDocuments = () => {
