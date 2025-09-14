@@ -59,14 +59,16 @@ export class PDFProcessor {
 
   async extractTextFromPDF(path: string): Promise<string> {
     try {
-      // Add base URL if path is relative
-      const fullPath = path.startsWith('http') ? path : window.location.origin + path;
-      const data = await fetch(fullPath).then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.arrayBuffer();
-      });
-      
-      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      // Resolve the path to a valid absolute URL or leave blob/data URLs as-is
+      const fullPath = this.resolvePath(path);
+
+      const res = await fetch(fullPath);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.arrayBuffer();
+
+      // pdfjs-lib accepts an ArrayBuffer via the 'data' option when calling getDocument
+  const loadingTask: any = (pdfjsLib as any).getDocument({ data });
+  const pdf: any = await loadingTask.promise;
       let fullText = '';
 
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -91,12 +93,12 @@ export class PDFProcessor {
    */
   async quickExtractSnippet(path: string): Promise<string> {
     try {
-      const fullPath = path.startsWith('http') ? path : window.location.origin + path;
-      const data = await fetch(fullPath).then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.arrayBuffer();
-      });
-      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      const fullPath = this.resolvePath(path);
+      const res = await fetch(fullPath);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.arrayBuffer();
+  const loadingTask: any = (pdfjsLib as any).getDocument({ data });
+  const pdf: any = await loadingTask.promise;
       const page = await pdf.getPage(1);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
@@ -134,6 +136,17 @@ export class PDFProcessor {
     return undefined;
   }
 
+  // Resolve path to absolute URL when necessary. Leave blob: and data: URIs unchanged.
+  private resolvePath(path: string): string {
+    if (!path) return path;
+    const trimmed = path.trim();
+    if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return trimmed;
+    if (/^(https?:)?\/\//i.test(trimmed)) return trimmed;
+    // For Vite dev server, use relative paths to access files in public/
+    const base = window.location.pathname.endsWith('/') ? '.' : '.';
+    return base + (trimmed.startsWith('/') ? trimmed : '/' + trimmed);
+  }
+
   async processPDF(path: string, name: string): Promise<ProcessedDocument> {
     const cacheKey = `${path}:${name}`;
     // Check cache first
@@ -147,13 +160,19 @@ export class PDFProcessor {
     // Start processing
     const processingPromise = (async () => {
       try {
+        // Resolve the path once and use the resolved URL for all fetches
+  const resolvedPath = this.resolvePath(path);
         // Load PDF and extract text in parallel
         const [pdfDataResponse, extractedText] = await Promise.all([
-          fetch(path).then(res => res.arrayBuffer()),
-          this.extractTextFromPDF(path)
+          fetch(resolvedPath).then(res => {
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            return res.arrayBuffer();
+          }),
+          this.extractTextFromPDF(resolvedPath)
         ]);
-        const pdf = await pdfjsLib.getDocument({ data: pdfDataResponse }).promise;
-        const metadata = await pdf.getMetadata().catch(() => ({}));
+  const loadingTask: any = (pdfjsLib as any).getDocument({ data: pdfDataResponse });
+  const pdf: any = await loadingTask.promise;
+  const metadata = await pdf.getMetadata().catch(() => ({}));
         const info = (metadata as any)?.info || {};
         // Create sentences array and build snippet + short summary (5-6 sentences)
         const sentences = (extractedText || '').split(/(?<=[.!?])\s+/)
@@ -173,6 +192,10 @@ export class PDFProcessor {
         } catch (error) {
           console.error('Error classifying document:', error);
         }
+        // Debug: log the top classification for observability during testing
+        try {
+          console.debug(`PDFProcessor: topCategory for ${name} ->`, topCategory);
+        } catch (e) {}
         const processed: ProcessedDocument = {
           id: Math.random().toString(36).substr(2, 9),
           name,

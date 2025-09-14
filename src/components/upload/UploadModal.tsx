@@ -3,6 +3,7 @@ import { X, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { useDocuments } from '../../contexts/DocumentContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { AIService } from '../../services/AIService';
+import { PDFProcessor } from '../../services/PDFProcessor';
 
 interface Document {
   id: string;
@@ -13,7 +14,7 @@ interface Document {
   type: string;
   name: string;
   summary: string;
-  entities: string[];
+  entities: { type: string; value: string }[];
   content: string;
   size: string;
   tags: string[];
@@ -31,7 +32,6 @@ interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const [dragActive, setDragActive] = useState(false);
   
@@ -84,38 +84,86 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
   const handleProcessing = async () => {
     if (!selectedFile || !user) return;
 
-    
     setUploadStatus('processing');
 
     try {
       const aiService = AIService.getInstance();
+      // Create blob URL for previewing the uploaded file
       const fileUrl = URL.createObjectURL(selectedFile);
 
-      // Extract text from the PDF
-      const text = await aiService.extractTextFromPDF(fileUrl);
-
-      // Classify the document if model is ready; otherwise fallback
-      const ready = await aiService.isReady();
-      let classifications: Classification[] = [];
-      let topClassification = { label: 'Other', score: 0 };
-      if (ready) {
-        classifications = await aiService.classifyDocument(text);
-        topClassification = classifications[0] || topClassification;
-      } else {
-        console.warn('AI model not ready; skipping classification for uploaded file');
+      // Use PDFProcessor to process the uploaded blob URL so we get text, summary, classifications
+      const pdfProcessor = PDFProcessor.getInstance();
+      let processed;
+      try {
+        processed = await pdfProcessor.processPDF(fileUrl, selectedFile.name);
+      } catch (procErr) {
+        console.error('PDFProcessor failed for uploaded file, falling back to simple extraction:', procErr);
+        // Fallback: attempt to read a small snippet from ArrayBuffer
+        const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
+          reader.onerror = (err) => reject(err);
+          reader.readAsArrayBuffer(selectedFile);
+        });
+        const decoder = new TextDecoder('utf-8');
+        const textFallback = decoder.decode(arrayBuffer.slice(0, 2000));
+        processed = {
+          id: Date.now().toString(),
+          name: selectedFile.name,
+          text: textFallback,
+          snippet: textFallback.slice(0, 300),
+          summary: '',
+          path: fileUrl,
+          category: 'Other',
+          confidenceScore: 0,
+          classifications: [],
+          pageCount: 0,
+          metadata: {},
+          title: selectedFile.name,
+          author: user.username,
+          date: new Date().toISOString()
+        } as any;
       }
 
-      const newDocument: Document & { id: string } = {
+      const text = processed.text || processed.snippet || '';
+      console.log('Extracted text:', text.substring(0, 100) + '...'); // Debug log
+
+      // Use classifications and summary returned by PDFProcessor when available
+      let classifications: Classification[] = [];
+      let topClassification = { label: 'Other', score: 0 };
+      if (processed && Array.isArray(processed.classifications) && processed.classifications.length > 0) {
+        classifications = processed.classifications as Classification[];
+        topClassification = classifications[0];
+      } else {
+        try {
+          classifications = await aiService.classifyDocument(text);
+          if (classifications && classifications.length > 0) topClassification = classifications[0];
+        } catch (classifyError) {
+          console.warn('Classification failed, using fallback:', classifyError);
+        }
+      }
+
+      // Prefer any category already returned by PDFProcessor (or obvious filename hints)
+      // to avoid overwriting user-intended categories. If none exist, fall back to topClassification.
+      const filenameHint = selectedFile.name.toLowerCase();
+      let chosenCategory = processed?.category || '';
+      if (!chosenCategory) {
+        if (filenameHint.includes('legal') || filenameHint.includes('law')) chosenCategory = 'Legal';
+        else if (filenameHint.includes('finance') || filenameHint.includes('financial') || filenameHint.includes('invoice')) chosenCategory = 'Finance';
+      }
+      if (!chosenCategory) chosenCategory = topClassification.label || 'Other';
+
+  const newDocument: Document & { id: string } = {
         id: Date.now().toString(),
         title: selectedFile.name.replace(/\.[^/.]+$/, ''),
-        category: topClassification.label,
+    category: chosenCategory,
         author: user.username,
         uploadDate: new Date().toISOString(),
         type: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
         name: selectedFile.name,
-        summary: `AI-generated summary for ${selectedFile.name}.`,
-        entities: [{ type: 'exampleType', value: 'exampleValue' }],
-        content: text,
+  summary: processed.summary || `AI-generated summary for ${selectedFile.name}.`,
+    entities: [{ type: 'exampleType', value: 'exampleValue' }],
+  content: text,
         size: `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB`,
         tags: ['newly-uploaded'],
         path: fileUrl,

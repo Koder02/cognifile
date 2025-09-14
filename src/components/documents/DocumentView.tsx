@@ -89,12 +89,12 @@ export default function DocumentView(): JSX.Element {
               <div className="w-3 bg-gradient-to-b from-accent-start to-accent-end"></div>
               <div className="flex-1 p-8">
                 <div className="flex items-center mb-6">
-                  <div className="bg-bg-page p-3 rounded-lg mr-4">
-                    <FileText className="h-6 w-6 text-primary" />
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                    {doc.classification || 'Processing...'}
-                  </span>
+                    <div className="bg-bg-page p-3 rounded-lg mr-4 mb-3 sm:mb-0">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div title={doc.category} className="inline-flex items-center justify-center px-2 sm:px-3 py-1 border border-black text-black rounded text-xs sm:text-sm font-bold max-w-[12rem] overflow-hidden">
+                      <span className="truncate">{doc.category || 'Uncategorized'}</span>
+                    </div>
                 </div>
 
                 <h1 className="text-3xl font-bold text-heading mb-6">{doc.name}</h1>

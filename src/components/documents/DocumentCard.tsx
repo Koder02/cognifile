@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { DocumentInfo } from '../../services/DocumentService';
-import { FileText, Loader2, File, Calendar, Download, Eye } from 'lucide-react';
+import { FileText, File, Calendar, Download, Eye } from 'lucide-react';
 import { formatPDFDate, formatUploadDate } from '../../utils/dateFormatter';
 
 interface DocumentCardProps {
@@ -8,11 +8,14 @@ interface DocumentCardProps {
 }
 
 export default function DocumentCard({ document }: DocumentCardProps) {
+  // Keep only the category badge; status labels removed per request
+  const categoryLabel = document.category || document.classification || 'Uncategorized';
+
   return (
     <div className="flex bg-surface rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group">
       <div className="w-3 bg-gradient-to-b from-accent-start to-accent-end"></div>
       <div className="flex-1 p-6">
-        <div className="flex items-start justify-between mb-4">
+  <div className="flex flex-col sm:flex-row items-start sm:justify-between mb-4">
           {document.thumbnail ? (
             <img 
               src={document.thumbnail} 
@@ -25,26 +28,12 @@ export default function DocumentCard({ document }: DocumentCardProps) {
             </div>
           )}
           
-          <div className="flex flex-col items-end">
-            <span className={`text-sm font-medium ${
-              document.processingStatus === 'processing' ? 'text-primary' :
-              document.processingStatus === 'completed' ? 'text-success' :
-              document.processingStatus === 'error' ? 'text-danger' :
-              'text-muted'
-            }`}>
-              {document.processingStatus === 'processing' ? (
-                <div className="flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Analyzing...
-                </div>
-              ) : document.processingStatus === 'completed' ? (
-                document.classification || 'Processed'
-              ) : document.processingStatus === 'error' ? (
-                'Analysis failed'
-              ) : (
-                'Waiting...'
-              )}
-            </span>
+          <div className="flex flex-col items-start sm:items-end mt-4 sm:mt-0">
+            <div className="flex items-center">
+              <div title={document.category} className="inline-flex items-center justify-center px-2 sm:px-3 py-1 border border-black text-black rounded text-xs sm:text-sm font-bold max-w-[10rem] overflow-hidden">
+                <span className="truncate">{categoryLabel}</span>
+              </div>
+            </div>
           </div>
         </div>
 

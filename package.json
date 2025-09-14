@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/copy-pdfjs-worker.js",
-    "dev": "node scripts/copy-pdfjs-worker.js && vite",
-    "build": "node scripts/copy-pdfjs-worker.js && vite build",
+  "postinstall": "node scripts/copy-pdfjs-worker.js",
+  "dev": "node scripts/gen-data-index.js && node scripts/copy-pdfjs-worker.js && vite",
+  "build": "node scripts/gen-data-index.js && node scripts/copy-pdfjs-worker.js && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "semantic:start": "cd server/semantic_search && uvicorn app:app --host 0.0.0.0 --port 8001 --reload",

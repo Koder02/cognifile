@@ -57,7 +57,7 @@ export default function Dashboard() {
           case 'Legal':
             return doc.category === 'Legal' || doc.category === 'Contracts';
           case 'Technical':
-            return doc.category === 'Technical Reports';
+            return doc.category === 'Tech';
           default:
             return true;
         }

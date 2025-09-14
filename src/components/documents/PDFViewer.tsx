@@ -50,15 +50,19 @@ export default function PDFViewer({ url, className = 'w-full' }: PDFViewerProps)
         setLoading(true);
         setError(null);
 
-        // Handle both absolute and relative URLs
-        const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
-        
-        // Load the PDF document with retry mechanism
-        const loadingTask = pdfjsLib.getDocument({
-          url: fullUrl,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/',
-          cMapPacked: true,
-        });
+        // Handle blob:, data:, absolute and relative URLs correctly
+        let fullUrl: string | { url: string } = url;
+
+        // If URL is a relative path (no scheme), prepend origin
+        const isAbsolute = /^(https?:)?\/\//i.test(url) || url.startsWith('blob:') || url.startsWith('data:');
+        if (!isAbsolute) {
+          fullUrl = window.location.origin + (url.startsWith('/') ? url : '/' + url);
+        }
+
+        // pdf.js accepts either a URL string or an object with a 'url' property
+        const loadingTask = pdfjsLib.getDocument(
+          typeof fullUrl === 'string' ? { url: fullUrl } : { url: fullUrl }
+        );
 
         // Add progress callback
         loadingTask.onProgress = (progress: PDFProgress) => {
@@ -92,15 +96,22 @@ export default function PDFViewer({ url, className = 'w-full' }: PDFViewerProps)
       setLoading(true);
       setError(null);
 
-      // Cancel any ongoing render operation
+      // Cancel any ongoing render operation (use cancel() if available)
       if (renderTaskRef.current) {
-        await renderTaskRef.current.promise.catch(() => {});
+        const task: any = renderTaskRef.current;
+        if (typeof task.cancel === 'function') {
+          try { task.cancel(); } catch (_) { /* ignore */ }
+        } else if (task.promise) {
+          await task.promise.catch(() => {});
+        }
         renderTaskRef.current = null;
       }
 
       const page = await pdfDocRef.current.getPage(pageNumber);
       const viewport = page.getViewport({ scale, rotation });
+      // Re-check canvas ref because it may have changed during async operations
       const canvas = canvasRef.current;
+      if (!canvas) return;
       const context = canvas.getContext('2d');
       if (!context) {
         throw new Error('Could not get canvas context');
@@ -126,11 +137,21 @@ export default function PDFViewer({ url, className = 'w-full' }: PDFViewerProps)
       };
 
       // Store the new render task
-      renderTaskRef.current = page.render(renderContext);
+      const newTask: any = page.render(renderContext);
+      renderTaskRef.current = newTask;
 
-      // Wait for the render to complete
-      await renderTaskRef.current.promise;
-      renderTaskRef.current = null;
+      // Wait for the render to complete and ignore cancelled-render exceptions
+      const waitPromise = newTask && newTask.promise ? newTask.promise : Promise.resolve();
+      try {
+        await waitPromise;
+      } catch (renderErr: any) {
+        if (renderErr && (renderErr.name === 'RenderingCancelledException' || /cancelled/i.test(renderErr.message || ''))) {
+          // Do not treat cancellation as an error; just abort rendering
+          return;
+        }
+        throw renderErr;
+      }
+      if (renderTaskRef.current === newTask) renderTaskRef.current = null;
       setCurrentPage(pageNumber);
     } catch (err) {
       console.error('Error rendering page:', err);

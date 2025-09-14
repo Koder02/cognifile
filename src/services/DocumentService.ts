@@ -81,12 +81,23 @@ export class DocumentService {
         summary: processedDoc.summary || processedDoc.snippet || processedDoc.text.substring(0, 500) + '...'
       };
 
-      // Classify the document using BART
+      // Classify the document using BART, but preserve any existing user-assigned category
       if (this.aiService) {
-        const classifications = await this.aiService.classifyDocument(processedDoc.text) as { label: string }[] | undefined;
+        const classifications = await this.aiService.classifyDocument(processedDoc.text) as Array<{ label: string; score?: number }> | undefined;
         if (classifications?.length) {
-          document.classification = classifications[0].label;
-          document.category = classifications[0].label; // Ensure both are set for filtering
+          const top = classifications[0];
+          // Set classification always (for search/filtering), but only overwrite category
+          // if it was previously unset/uncategorized or if the model is confident.
+          document.classification = top.label;
+          const existingCategory = (document.category || '').trim();
+          const isUncategorized = !existingCategory || existingCategory === 'Uncategorized';
+          // Do not overwrite a non-empty category — treat user-assigned categories as authoritative.
+          if (isUncategorized) {
+            document.category = top.label;
+          } else {
+            // preserve existing category
+            document.category = existingCategory;
+          }
         }
       }
 
@@ -112,19 +123,72 @@ export class DocumentService {
   async loadDocuments(): Promise<DocumentInfo[]> {
     try {
       console.log('Loading documents from public/data directory...');
-      // Define the list of documents (since we're using static files)
-      const fileList = [
-        '100001798.pdf',
-        '3594737.pdf',
-        'd.pdf',
-        'data-feed-2024.pdf',
-        'Empirical_data_analysis.pdf',
-        'ff.pdf',
-        'ffff.pdf',
-        'FSVV_Feb2024.pdf',
-        'pdf-8.pdf',
-        'sdTCG_v4.4_October_FINAL.pdf'
-      ];
+      // Try to auto-discover PDFs in the public `/data/` folder.
+      // Strategy: 1) attempt to fetch `/data/index.json` (authoritative manifest)
+      // 2) fall back to fetching `/data/` and parsing an HTML directory listing (if the dev server provides one)
+      // 3) final fallback to the known static list maintained here.
+      let fileList: string[] = [];
+      try {
+        console.log('Attempting to fetch /data/index.json...');
+        // Try with and without leading slash to handle different Vite base paths
+        const manifestRes = await fetch('./data/index.json').catch(() => fetch('/data/index.json'));
+        console.log('Manifest response:', manifestRes.status, manifestRes.statusText);
+        if (manifestRes.ok) {
+          const manifest = await manifestRes.json();
+          console.log('Parsed manifest:', manifest);
+          if (Array.isArray(manifest)) {
+            fileList = manifest.filter((f: any) => typeof f === 'string' && f.toLowerCase().endsWith('.pdf'));
+            console.info('Loaded PDF manifest from /data/index.json:', fileList);
+          }
+        } else {
+          console.warn('Failed to load manifest:', manifestRes.status, manifestRes.statusText);
+        }
+      } catch (e) {
+        console.error('Error loading manifest:', e);
+        // ignore manifest errors and try directory listing
+      }
+
+      if (!fileList || fileList.length === 0) {
+        try {
+          const dirRes = await fetch('/data/');
+          if (dirRes.ok) {
+            const contentType = dirRes.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+              const html = await dirRes.text();
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, 'text/html');
+              const links = Array.from(doc.querySelectorAll('a')) as HTMLAnchorElement[];
+              const pdfs = links
+                .map(a => a.getAttribute('href') || '')
+                .filter(h => h.toLowerCase().endsWith('.pdf'))
+                .map(h => h.replace(/^\/?data\//, ''));
+              if (pdfs.length > 0) {
+                fileList = pdfs;
+                console.info('Discovered PDFs by parsing /data/ HTML listing:', fileList);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore and fallback
+        }
+      }
+
+      // Final fallback if discovery failed
+      if (!fileList || fileList.length === 0) {
+        fileList = [
+          '100001798.pdf',
+          '3594737.pdf',
+          'd.pdf',
+          'data-feed-2024.pdf',
+          'Empirical_data_analysis.pdf',
+          'ff.pdf',
+          'ffff.pdf',
+          'FSVV_Feb2024.pdf',
+          'pdf-8.pdf',
+          'sdTCG_v4.4_October_FINAL.pdf'
+        ];
+        console.warn('Falling back to static file list for documents:', fileList);
+      }
 
       // Create document objects
       this.documents = fileList.map((filename) => ({

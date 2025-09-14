@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Home, FolderOpen, Share2, Settings, ChevronDown, ChevronRight, FileText, DollarSign, Users, Scale, Contact as FileContract, Receipt, Menu, X, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../../logo.jpg';
+import logo from '../../../logo.png';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -27,11 +27,11 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
   };
 
   const categories = [
-    { id: 'Finance', icon: DollarSign, color: 'text-black' },
+    { id: 'Finance', icon: DollarSign, color: 'text-[#008000]' },
     { id: 'HR', icon: Users, color: 'text-[#172D9D]' },
     { id: 'Legal', icon: Scale, color: 'text-purple-600' },
     { id: 'Contracts', icon: FileContract, color: 'text-orange-600' },
-    { id: 'Technical Reports', icon: FileText, color: 'text-indigo-600' },
+  { id: 'Tech', icon: FileText, color: 'text-indigo-600' },
     { id: 'Invoices', icon: Receipt, color: 'text-red-600' },
   ];
 
@@ -66,12 +66,13 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
           <div className="flex items-center justify-between">
             {!collapsed && (
               <div className="flex items-center">
-                <img src={logo} alt="Cognifile Logo" className="h-8 w-8 object-contain mr-3" />
-                <h1 className="text-xl font-bold text-white">Cognifile</h1>
+                <img src={logo} alt="CogniFile Logo" className="h-20 w-20 object-contain mr-3" />
+                <h1 className="text-2xl font-bold text-white">CogniFile</h1>
               </div>
             )}
             <button
               onClick={onToggle}
+              aria-label={collapsed ? 'Open sidebar' : 'Close sidebar'}
               className="p-2 hover:bg-sidebar-soft rounded-lg transition-colors"
             >
               {collapsed ? <Menu className="h-5 w-5 text-white" /> : <X className="h-5 w-5 text-white lg:hidden" />}
@@ -154,7 +155,7 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
             <div className="space-y-1">
               <button className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                 <Share2 className="h-5 w-5" />
-                {!collapsed && <span className="ml-3">Shared w/ me</span>}
+                {!collapsed && <span className="ml-3">Shared with me</span>}
               </button>
             </div>
           </div>

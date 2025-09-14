@@ -19,11 +19,15 @@ export default defineConfig({
   server: {
     fs: {
       strict: false,
+      allow: ['..']  // Allow serving files from outside the project root
     },
     headers: {
       // Allow loading the PDF.js worker from the local server
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+    watch: {
+      usePolling: true,  // Ensure file changes are detected
     },
   },
   build: {
