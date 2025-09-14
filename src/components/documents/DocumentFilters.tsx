@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { useState } from 'react';
 
 interface FilterOptions {
   category?: string;
   author?: string;
-  dateRange?: { start: string; end: string };
+  dateRange?: { 
+    start?: string; 
+    end?: string; 
+  } | undefined;
 }
 
 interface DocumentFiltersProps {
@@ -26,14 +28,24 @@ export default function DocumentFilters({ onFilterChange, categories, authors }:
   };
 
   const handleDateRangeChange = (key: 'start' | 'end', value: string) => {
-    const dateRange = { ...filters.dateRange, [key]: value };
+    const currentRange = filters.dateRange || {};
+    const dateRange = { ...currentRange, [key]: value || undefined };
+    
+    // If both dates are empty, remove the date range filter
     if (!dateRange.start && !dateRange.end) {
       const newFilters = { ...filters };
       delete newFilters.dateRange;
       setFilters(newFilters);
       onFilterChange(newFilters);
     } else {
-      const newFilters = { ...filters, dateRange };
+      // Only include non-empty dates
+      const newFilters = { 
+        ...filters, 
+        dateRange: {
+          ...(dateRange.start && { start: dateRange.start }),
+          ...(dateRange.end && { end: dateRange.end })
+        }
+      };
       setFilters(newFilters);
       onFilterChange(newFilters);
     }

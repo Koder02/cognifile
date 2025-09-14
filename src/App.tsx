@@ -1,4 +1,4 @@
-import { useState, FC, PropsWithChildren, useEffect } from 'react';
+import { useState, FC, PropsWithChildren } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/auth/LoginPage';
 import Dashboard from './components/dashboard/Dashboard';

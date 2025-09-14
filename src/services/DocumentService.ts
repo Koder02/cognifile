@@ -130,8 +130,16 @@ export class DocumentService {
       this.documents = fileList.map((filename) => ({
         id: filename.replace('.pdf', ''),
         name: filename,
+        title: filename.replace(/\.[^/.]+$/, ''),
         path: `/data/${filename}`,
         type: 'application/pdf',
+        size: '0 MB', // Will be updated when file is processed
+        author: 'Unknown', // Will be updated when file is processed
+        uploadDate: new Date().toISOString(),
+        summary: 'Processing...',
+        content: '',
+        tags: ['imported'],
+        entities: [] as { type: string; value: string }[],
         processingStatus: 'processing',
         category: 'Uncategorized'
       }));

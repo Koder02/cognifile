@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Filter, X, Calendar, Check } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import SearchBar from './SearchBar';
 
 interface FilterOptions {

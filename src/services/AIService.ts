@@ -12,12 +12,6 @@ export interface SearchResult {
   score: number;
 }
 
-interface TextContentItem {
-  str: string;
-}
-
-type EmbeddingArray = number[][];
-
 class AIServicePrivate {
   private encoder: use.UniversalSentenceEncoder | null = null;
   private bartService: BartService;

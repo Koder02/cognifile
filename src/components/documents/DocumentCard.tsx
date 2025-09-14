@@ -80,10 +80,14 @@ export default function DocumentCard({ document }: DocumentCardProps) {
             <Eye className="h-4 w-4 mr-2" />
             View
           </Link>
-          <button className="flex items-center px-3 py-2 text-muted hover:text-text hover:bg-bg-page rounded-lg transition-colors text-sm">
+          <a
+            href={document.path}
+            download={document.name}
+            className="flex items-center px-3 py-2 text-muted hover:text-text hover:bg-bg-page rounded-lg transition-colors text-sm"
+          >
             <Download className="h-4 w-4 mr-2" />
             Download
-          </button>
+          </a>
         </div>
       </div>
     </div>

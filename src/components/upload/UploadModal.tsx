@@ -114,7 +114,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         type: selectedFile.name.split('.').pop()?.toUpperCase() || 'PDF',
         name: selectedFile.name,
         summary: `AI-generated summary for ${selectedFile.name}.`,
-        entities: [],
+        entities: [{ type: 'exampleType', value: 'exampleValue' }],
         content: text,
         size: `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB`,
         tags: ['newly-uploaded'],
@@ -123,7 +123,10 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         classification: topClassification.label,
       };
 
-      addDocument(newDocument);
+      addDocument({
+        ...newDocument,
+        entities: [{ type: 'exampleType', value: 'exampleValue' }]
+      });
 
       setUploadStatus('success');
     } catch (error) {
@@ -258,7 +261,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             </div>
           )}
 
-          {uploadStatus === 'error' && (
+          {uploadStatus === 'error' && 
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-red-400 mb-2">Upload Failed</h3>
@@ -270,7 +273,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 Try Again
               </button>
             </div>
-          )}
+          }
         </div>
       </div>
     </div>

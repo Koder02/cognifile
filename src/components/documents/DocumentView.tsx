@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDocuments } from '../../contexts/DocumentContext';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
+import { formatPDFDate } from '../../utils/dateFormatter';
 import DocumentChat from './DocumentChat';
+import PDFViewer from './PDFViewer';
 import { DocumentMetadata } from '../../services/DocumentService';
 
 export default function DocumentView(): JSX.Element {
@@ -78,7 +80,11 @@ export default function DocumentView(): JSX.Element {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* PDF Viewer */}
+            <PDFViewer url={doc.path} />
+            
+            {/* Document Info */}
             <div className="flex bg-surface rounded-xl shadow-sm overflow-hidden">
               <div className="w-3 bg-gradient-to-b from-accent-start to-accent-end"></div>
               <div className="flex-1 p-8">
@@ -163,7 +169,7 @@ export default function DocumentView(): JSX.Element {
                           <FileText className="h-5 w-5 text-muted mr-3" />
                           <div>
                             <p className="text-sm text-muted">Created</p>
-                            <p className="font-medium text-text">{metadata.creationDate}</p>
+                            <p className="font-medium text-text">{formatPDFDate(metadata.creationDate)}</p>
                           </div>
                         </div>
                       )}

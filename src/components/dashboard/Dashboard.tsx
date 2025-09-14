@@ -33,7 +33,7 @@ export default function Dashboard() {
     return () => window.removeEventListener('openUploadModal', handleOpenUpload);
   }, []);
   
-  const { documents, searchDocuments } = useDocuments();
+    const { documents, searchDocuments, loading } = useDocuments();
   const { user } = useAuth();
 
   // Get unique categories for filters
@@ -103,6 +103,7 @@ export default function Dashboard() {
             <DocumentList 
               documents={getFilteredDocuments()}
               searchQuery={searchQuery}
+              isLoading={loading}
             />
           </div>
         </div>
