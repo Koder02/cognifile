@@ -28,10 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
+    // Do not auto-restore user from localStorage so login page appears first.
+    // This prevents automatic admin login on app start.
   }, []);
 
   const login = (username: string, password: string): boolean => {

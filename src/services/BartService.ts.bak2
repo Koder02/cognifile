@@ -1,0 +1,57 @@
+import { HfInference } from '@huggingface/inference';
+
+export class BartService {
+  private static instance: BartService;
+  private hf: HfInference;
+  private modelId = 'facebook/bart-large-mnli';  // Using the model from Hugging Face Hub directly
+
+  private constructor() {
+    // Initialize with your Hugging Face API token if you have one
+    this.hf = new HfInference(process.env.VITE_HUGGINGFACE_API_TOKEN);
+  }
+
+  public static getInstance(): BartService {
+    if (!BartService.instance) {
+      BartService.instance = new BartService();
+    }
+    return BartService.instance;
+  }
+
+  async classify(text: string, labels: string[]): Promise<Array<{ label: string; score: number }>> {
+    try {
+      // Using zero-shot classification
+      const response = await this.hf.zeroShotClassification({
+        model: this.modelId,
+        inputs: text,
+        parameters: { candidate_labels: labels }
+      });
+
+      // Process and return the classification results
+      return labels.map((label, index) => ({
+        label,
+        score: result[index]?.score || 0
+      })).sort((a, b) => b.score - a.score);
+    } catch (error) {
+      console.error('Error during classification:', error);
+      throw error;
+    }
+  }
+
+  async generateSummary(text: string): Promise<string> {
+    try {
+      const result = await this.hf.summarization({
+        model: this.modelPath,
+        inputs: text,
+        parameters: {
+          max_length: 130,
+          min_length: 30,
+        },
+      });
+
+      return result.summary_text;
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      throw error;
+    }
+  }
+}

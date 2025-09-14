@@ -35,12 +35,12 @@ export default function DocumentView(): JSX.Element {
 
   if (!doc) {
     return (
-      <div className="min-h-screen bg-bg-page flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <FileText className="h-16 w-16 text-muted mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-heading mb-2">Document not found</h2>
-          <p className="text-text mb-4">The document you're looking for doesn't exist.</p>
-          <Link to="/dashboard" className="text-primary hover:text-primary-700 font-medium">Return to Dashboard</Link>
+          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Document not found</h2>
+          <p className="text-gray-600 mb-4">The document you're looking for doesn't exist.</p>
+          <Link to="/dashboard" className="text-[#0C2C47] hover:text-[#2D5652] font-medium">Return to Dashboard</Link>
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ export default function DocumentView(): JSX.Element {
   const summaryText = doc.summary || metadata?.summary || '';
 
   return (
-    <div className="min-h-screen bg-bg-page">
+      <div className="min-h-screen bg-bg-page">
       <div className="bg-surface border-b border-border-subtle">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -74,9 +74,7 @@ export default function DocumentView(): JSX.Element {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      </div>      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="flex bg-surface rounded-xl shadow-sm overflow-hidden">
@@ -99,98 +97,90 @@ export default function DocumentView(): JSX.Element {
                       <div className="p-6 rounded-lg bg-bg-page">
                         <h3 className="text-xl font-semibold text-heading mb-4">Summary</h3>
                         <div className="text-text">
-                          {summaryText.split('\n\n').map((para, idx) => (
-                            <p key={idx} className="mb-3">{para}</p>
-                          ))}
-                        </div>
+                        {summaryText.split('\n\n').map((para, idx) => (
+                          <p key={idx} className="mb-3">{para}</p>
+                        ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="p-6 rounded-lg bg-bg-page">
-                      <p className="text-text">
-                        {loading ? 'Loading document information...' : 'Document Status: ' + (doc.processingStatus ?? 'idle')}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-lg bg-white/5">
+                    <p className="text-white/90">{loading ? 'Loading document information...' : 'Document Status: ' + (doc.processingStatus ?? 'idle')}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
-              <div className="w-full h-2 bg-gradient-to-r from-accent-start to-accent-end"></div>
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-heading mb-4">Document Details</h3>
+            <div className="bg-gradient-to-r from-[#172D9D] to-[#787CFE] rounded-xl shadow-sm border border-[#172D9D]/20 p-6 text-black">
+              <h3 className="text-lg font-semibold text-black mb-4">Document Details</h3>
 
-                <div className="space-y-4">
-                  {metadata ? (
-                    <>
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted mr-3" />
-                        <div>
-                          <p className="text-sm text-muted">File Type</p>
-                          <p className="font-medium text-text">{doc.type}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted mr-3" />
-                        <div>
-                          <p className="text-sm text-muted">File Size</p>
-                          <p className="font-medium text-text">{metadata.fileSize}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted mr-3" />
-                        <div>
-                          <p className="text-sm text-muted">Pages</p>
-                          <p className="font-medium text-text">{metadata.pageCount}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted mr-3" />
-                        <div>
-                          <p className="text-sm text-muted">Author</p>
-                          <p className="font-medium text-text">{metadata.author}</p>
-                        </div>
-                      </div>
-
-                      {metadata.creationDate && (
-                        <div className="flex items-center">
-                          <FileText className="h-5 w-5 text-muted mr-3" />
-                          <div>
-                            <p className="text-sm text-muted">Created</p>
-                            <p className="font-medium text-text">{metadata.creationDate}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {metadata.keywords && metadata.keywords.length > 0 && (
-                        <div>
-                          <p className="text-sm text-muted mb-2">Keywords</p>
-                          <div className="flex flex-wrap gap-2">
-                            {metadata.keywords.map((keyword, index) => (
-                              <span key={index} className="px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                {keyword}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
+              <div className="space-y-4">
+                {metadata ? (
+                  <>
                     <div className="flex items-center">
-                      <FileText className="h-5 w-5 text-muted mr-3" />
+                      <FileText className="h-5 w-5 text-white/90 mr-3" />
                       <div>
-                        <p className="text-sm text-muted">File Type</p>
-                        <p className="font-medium text-text">{doc.type}</p>
+                        <p className="text-sm text-black/80">File Type</p>
+                        <p className="font-medium text-black">{doc.type}</p>
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    <div className="flex items-center">
+                      <FileText className="h-5 w-5 text-white/90 mr-3" />
+                      <div>
+                        <p className="text-sm text-black/80">File Size</p>
+                        <p className="font-medium text-black">{metadata.fileSize}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <FileText className="h-5 w-5 text-white/90 mr-3" />
+                      <div>
+                        <p className="text-sm text-black/80">Pages</p>
+                        <p className="font-medium text-black">{metadata.pageCount}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <FileText className="h-5 w-5 text-white/90 mr-3" />
+                      <div>
+                        <p className="text-sm text-black/80">Author</p>
+                        <p className="font-medium text-black">{metadata.author}</p>
+                      </div>
+                    </div>
+
+                    {metadata.creationDate && (
+                      <div className="flex items-center">
+                        <FileText className="h-5 w-5 text-white/90 mr-3" />
+                        <div>
+                          <p className="text-sm text-black/80">Created</p>
+                          <p className="font-medium text-black">{metadata.creationDate}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {metadata.keywords && metadata.keywords.length > 0 && (
+                      <div>
+                        <p className="text-sm text-black/80 mb-2">Keywords</p>
+                        <div className="flex flex-wrap gap-2">
+                          {metadata.keywords.map((keyword, index) => (
+                            <span key={index} className="px-2 py-1 bg-white/10 text-black rounded-full text-sm">{keyword}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 text-black/90 mr-3" />
+                    <div>
+                      <p className="text-sm text-black/80">File Type</p>
+                      <p className="font-medium text-black">{doc.type}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

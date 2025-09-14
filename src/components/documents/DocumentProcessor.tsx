@@ -20,8 +20,7 @@ interface DocumentProcessorProps {
 }
 
 export default function DocumentProcessor({ onProcessingComplete }: DocumentProcessorProps) {
-  const [progress, setProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(true);
+  // no visible state needed; processing runs in background
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,7 +28,7 @@ export default function DocumentProcessor({ onProcessingComplete }: DocumentProc
       try {
         const pdfProcessor = PDFProcessor.getInstance();
         const searchService = SearchService.getInstance();
-        let processed = 0;
+  // processing batches
 
         // Process PDFs in batches of 2 to avoid overwhelming the system
         for (let i = 0; i < PDF_FILES.length; i += 2) {
@@ -46,51 +45,24 @@ export default function DocumentProcessor({ onProcessingComplete }: DocumentProc
               path: doc.path
             });
           });
-
-          processed += batch.length;
-          setProgress((processed / PDF_FILES.length) * 100);
         }
 
-        setIsProcessing(false);
+        // All batches processed
         onProcessingComplete();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred while processing documents');
-        setIsProcessing(false);
       }
     };
 
     processDocuments();
   }, [onProcessingComplete]);
 
-  if (error) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-          <h3 className="text-red-600 font-semibold mb-2">Error</h3>
-          <p className="text-gray-700">{error}</p>
-        </div>
-      </div>
-    );
-  }
+    // We intentionally do not render a blocking modal here so the app can display documents
+    // while processing happens in the background. Keep the component invisible.
+    if (error) {
+      console.error('DocumentProcessor error:', error);
+      onProcessingComplete();
+    }
 
-  if (isProcessing) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-          <h3 className="text-xl font-semibold mb-4">Processing Documents</h3>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <p className="text-gray-600 mt-2 text-sm text-center">
-            {Math.round(progress)}% Complete
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+    return null;
 }

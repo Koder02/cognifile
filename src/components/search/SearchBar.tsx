@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SearchService } from '../../services/SearchService';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -41,14 +41,14 @@ export default function SearchBar({ value, onChange, placeholder = "Search docum
   }, [value]);
   return (
     <div className="relative">
-      <div className="flex items-center bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-[#0C2C47] focus-within:border-transparent transition-all duration-200 shadow-sm">
-        <Search className="h-5 w-5 text-gray-400 ml-4" />
+      <div className="flex items-center bg-[#F9FAFB] rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-[#2563EB] focus-within:border-transparent transition-all duration-200 shadow-sm">
+        <Search className="h-5 w-5 text-[#6B7280] ml-4" />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-gray-900 placeholder-gray-500"
+          className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-[#111827] placeholder-[#6B7280]"
         />
         {value && (
           <button
@@ -58,11 +58,6 @@ export default function SearchBar({ value, onChange, placeholder = "Search docum
             <X className="h-4 w-4" />
           </button>
         )}
-        <div className="h-6 w-px bg-gray-200 mr-3" />
-        <button className="flex items-center px-4 py-2 text-gray-600 hover:text-[#0C2C47] transition-colors mr-2">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-        </button>
       </div>
       
       {value && (
@@ -75,7 +70,7 @@ export default function SearchBar({ value, onChange, placeholder = "Search docum
           </div>
           <div className="p-2">
             {results.length === 0 && !loading ? (
-              <p className="text-xs text-gray-500 p-3">No results</p>
+              <p className="text-xs text-gray-500 p-3">Showing all matching files below</p>
             ) : (
               results.map((r, i) => (
                 <a key={r.id + i} href={r.path} className="block px-3 py-2 hover:bg-gray-50 border-b last:border-b-0">

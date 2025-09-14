@@ -1,6 +1,7 @@
 import { PDFDocumentProxy } from 'pdfjs-dist';
 import { AIService } from './AIService';
 import { pdfjsLib } from '../lib/pdfjs-worker';
+import { PDFProcessor } from './PDFProcessor';
 
 export interface DocumentMetadata {
   title?: string;
@@ -19,11 +20,20 @@ export interface DocumentMetadata {
 export interface DocumentInfo {
   id: string;
   name: string;
+  title: string;
   path: string;
   type: string;
-  classification?: string;
+  size: string;
   thumbnail?: string;
+  author: string;
+  uploadDate: string;
+  summary?: string;
+  content?: string;
+  tags: string[];
+  classification?: string;
+  category?: string;
   processingStatus?: 'idle' | 'processing' | 'completed' | 'error';
+  entities: { type: string; value: string }[];
   metadata?: DocumentMetadata;
 }
 
@@ -52,36 +62,48 @@ export class DocumentService {
     return DocumentService.instance;
   }
 
-  private async classifyDocument(document: DocumentInfo): Promise<void> {
+  private async processDocument(document: DocumentInfo): Promise<void> {
     try {
       document.processingStatus = 'processing';
       
-      if (!this.aiService) {
-        console.warn('AI Service not initialized; skipping classification');
-        document.classification = 'Unknown';
-        document.processingStatus = 'completed';
-        return;
+      // Create PDFProcessor instance
+      const pdfProcessor = PDFProcessor.getInstance();
+      
+      // Process the PDF
+      const processedDoc = await pdfProcessor.processPDF(document.path, document.name);
+      
+      // Update document with processed information
+      document.metadata = {
+        title: processedDoc.title,
+        author: processedDoc.author,
+        creationDate: processedDoc.date,
+        pageCount: processedDoc.pageCount,
+        summary: processedDoc.summary || processedDoc.snippet || processedDoc.text.substring(0, 500) + '...'
+      };
+
+      // Classify the document using BART
+      if (this.aiService) {
+        const classifications = await this.aiService.classifyDocument(processedDoc.text) as { label: string }[] | undefined;
+        if (classifications?.length) {
+          document.classification = classifications[0].label;
+          document.category = classifications[0].label; // Ensure both are set for filtering
+        }
       }
-      // If the encoder model failed to load (network issues), skip heavy classification
-      const encoderReady = await this.aiService.isReady();
-      if (!encoderReady) {
-        console.warn('AI encoder not ready; skipping classification for document', document.id);
-        document.classification = 'Unknown';
-        document.processingStatus = 'completed';
-        return;
-      }
 
-      // Extract text from the PDF
-      const text = await this.aiService.extractTextFromPDF(document.path);
-
-      // Get document classification using USE model
-      const classifications = await this.aiService.classifyDocument(text);
-      const topClassification = classifications[0];
-
-      document.classification = topClassification.label;
+  // Also add summary and full content directly for search
+  document.summary = processedDoc.summary || processedDoc.snippet || processedDoc.text.substring(0, 500) + '...';
+  (document as any).content = processedDoc.text;
+      document.category = document.classification || document.category;
       document.processingStatus = 'completed';
+
+      // Emit a global event so UI (notifications) can react to processed documents
+      try {
+        window.dispatchEvent(new CustomEvent('documentProcessed', { detail: { id: document.id, name: document.name, category: document.category, summary: document.summary, content: (document as any).content } }));
+      } catch (e) {
+        // ignore when running in non-browser test environments
+      }
     } catch (error) {
-      console.error('Error classifying document:', error);
+      console.error('Error processing document:', error);
       document.processingStatus = 'error';
       document.classification = 'Unknown';
     }
@@ -89,41 +111,48 @@ export class DocumentService {
 
   async loadDocuments(): Promise<DocumentInfo[]> {
     try {
-      console.log('Attempting to fetch documents from server...');
-      const response = await fetch('http://localhost:3001/api/documents', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        },
-        mode: 'cors'
-      });
+      console.log('Loading documents from public/data directory...');
+      // Define the list of documents (since we're using static files)
+      const fileList = [
+        '100001798.pdf',
+        '3594737.pdf',
+        'd.pdf',
+        'data-feed-2024.pdf',
+        'Empirical_data_analysis.pdf',
+        'ff.pdf',
+        'ffff.pdf',
+        'FSVV_Feb2024.pdf',
+        'pdf-8.pdf',
+        'sdTCG_v4.4_October_FINAL.pdf'
+      ];
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server response not OK:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText
-        });
-        throw new Error(`Server error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Received document data:', data);
-
-      // Transform the document data and prepend the server URL for paths
-      this.documents = data.map((doc: any) => ({
-        ...doc,
-        path: `http://localhost:3001${doc.path}`, // Prepend server URL to path
-        processingStatus: 'idle',
-        type: doc.type.toUpperCase() // Normalize type to uppercase
+      // Create document objects
+      this.documents = fileList.map((filename) => ({
+        id: filename.replace('.pdf', ''),
+        name: filename,
+        path: `/data/${filename}`,
+        type: 'application/pdf',
+        processingStatus: 'processing',
+        category: 'Uncategorized'
       }));
 
-      // Start document classification in parallel
-      console.log('Starting document classification...');
-      const classificationPromises = this.documents.map(doc => this.classifyDocument(doc));
-      await Promise.all(classificationPromises);
+      // Provide immediate quick snippets and start background processing for full summaries
+      const pdfProcessor = PDFProcessor.getInstance();
+      for (const doc of this.documents) {
+        try {
+          // quickExtractSnippet provides a fast preview from first page
+          const quick = await pdfProcessor.quickExtractSnippet(doc.path);
+          doc.summary = quick || 'Processing...';
+          (doc as any).content = quick || '';
+          // Kick off full processing in background (do not await)
+          this.processDocument(doc).catch(err => console.error(`Background processing failed for ${doc.name}:`, err));
+        } catch (e) {
+          console.error(`Error initiating processing for ${doc.name}:`, e);
+          doc.summary = 'Processing...';
+        }
+      }
 
+      console.log('Documents loaded and initially processed:', this.documents.length);
       return this.documents;
     } catch (error) {
       console.error('Error loading documents:', {
@@ -224,14 +253,23 @@ export class DocumentService {
       // Generate summary using AI (fall back to local extractive method if AI unavailable)
       let summary = 'Summary not available';
       try {
-        if (this.aiService) {
-          summary = await this.aiService.generateSummary(firstPageText || '');
-        } else {
-          summary = 'Summary not available';
+        if (this.aiService && firstPageText) {
+          // Use only the first 1000 characters for the summary to avoid overwhelming the model
+          const textToSummarize = firstPageText.slice(0, 1000);
+          
+          // Get instance from AIService and generate summary
+          const aiInstance = AIService.getInstance();
+          if (aiInstance instanceof AIService) {
+            const result = await aiInstance.generateSummary(textToSummarize);
+            if (result) {
+              summary = result;
+            }
+          }
         }
       } catch (sumErr) {
         console.warn('Error generating summary:', sumErr);
-        summary = 'Summary not available';
+        // Fall back to first few sentences if summary generation fails
+        summary = firstPageText.split(/[.!?]\s+/).slice(0, 2).join('. ') + '.';
       }
 
       // Type assertion for metadata.info

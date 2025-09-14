@@ -1,31 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { DocumentService } from '../services/DocumentService';
-
-export interface Document {
-  id: string;
-  title?: string;
-  category?: string;
-  author?: string;
-  uploadDate?: string;
-  summary?: string;
-  entities?: string[];
-  content?: string;
-  size?: string;
-  tags?: string[];
-  confidenceScore?: number;
-  type: string;
-  path: string;
-  name: string;
-  processingStatus?: string;
-  classification?: string;
-}
+import type { DocumentInfo } from '../services/DocumentService';
 
 interface DocumentContextType {
-  documents: Document[];
-  addDocument: (doc: Document) => void;
-  getDocument: (id: string) => Document | undefined;
-  searchDocuments: (query: string) => Document[];
-  filterDocuments: (filters: FilterOptions) => Document[];
+  documents: DocumentInfo[];
+  addDocument: (doc: DocumentInfo) => void;
+  getDocument: (id: string) => DocumentInfo | undefined;
+  searchDocuments: (query: string) => DocumentInfo[];
+  filterDocuments: (filters: FilterOptions) => DocumentInfo[];
   loading: boolean;
   error: string | null;
   documentService: DocumentService | null;
@@ -42,7 +24,7 @@ export const DocumentContext = createContext<DocumentContextType | undefined>(un
 
 
 export function DocumentProvider({ children }: { children: React.ReactNode }) {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const documentService = useMemo(() => {
@@ -62,6 +44,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     
     try {
       setLoading(true);
+      // loadDocuments now returns initial list quickly and processes in background
       const docs = await documentService.loadDocuments();
       if (!docs) {
         throw new Error('No documents returned from service');
@@ -80,7 +63,25 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     loadDocuments();
   }, [loadDocuments]);
 
-  const addDocument = (doc: Document) => {
+  // Listen for background processed events to update individual documents
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent;
+      const { id, category, summary, content } = custom.detail || {};
+      if (!id) return;
+      setDocuments(prev => prev.map(d => {
+        if (d.id !== id) return d;
+        const updated: any = { ...d, category: category || d.category, processingStatus: 'completed' };
+        if (summary) updated.summary = summary;
+        if (content) updated.content = content;
+        return updated;
+      }));
+    };
+    window.addEventListener('documentProcessed', handler as EventListener);
+    return () => window.removeEventListener('documentProcessed', handler as EventListener);
+  }, []);
+
+  const addDocument = (doc: DocumentInfo) => {
     setDocuments(prev => [...prev, doc]);
   };
 
@@ -88,19 +89,21 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     return documents.find(doc => doc.id === id);
   };
 
-  const searchDocuments = (query: string): Document[] => {
+  const searchDocuments = (query: string): DocumentInfo[] => {
     if (!query.trim()) return documents;
     
     const lowercaseQuery = query.toLowerCase();
     return documents.filter(doc =>
       doc.name.toLowerCase().includes(lowercaseQuery) ||
-      doc.classification?.toLowerCase().includes(lowercaseQuery)
+      doc.classification?.toLowerCase().includes(lowercaseQuery) ||
+      doc.summary?.toLowerCase().includes(lowercaseQuery) ||
+      doc.content?.toLowerCase().includes(lowercaseQuery)
     );
   };
 
-  const filterDocuments = (filters: FilterOptions): Document[] => {
+  const filterDocuments = (filters: FilterOptions): DocumentInfo[] => {
     return documents.filter(doc => {
-      if (filters.category && doc.classification !== filters.category) return false;
+      if (filters.category && doc.category !== filters.category) return false;
       return true;
     });
   };

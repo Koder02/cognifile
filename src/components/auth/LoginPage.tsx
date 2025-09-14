@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { FileText, Lock, User, AlertCircle } from 'lucide-react';
+import logo from '../../../logo.jpg';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -27,9 +28,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="bg-[#0C2C47] p-3 rounded-full">
-              <FileText className="h-8 w-8 text-white" />
-            </div>
+            <img src={logo} alt="Cognifile Logo" className="h-16 w-16 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-[#0C2C47]">Cognifile</h1>
           <p className="text-gray-600 mt-2">AI-Powered Document Intelligence</p>

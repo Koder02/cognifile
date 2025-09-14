@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Home, FolderOpen, Share2, Settings, ChevronDown, ChevronRight, FileText, DollarSign, Users, Scale, Contact as FileContract, Receipt, Menu, X, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import logo from '../../../logo.jpg';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   selectedCategory: string;
   onCategorySelect: (category: string) => void;
+  onHomeClick: () => void;
 }
 
-export default function Sidebar({ collapsed, onToggle, selectedCategory, onCategorySelect }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, selectedCategory, onCategorySelect, onHomeClick }: SidebarProps) {
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['documents']);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => 
@@ -22,8 +27,8 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
   };
 
   const categories = [
-    { id: 'Finance', icon: DollarSign, color: 'text-green-600' },
-    { id: 'HR', icon: Users, color: 'text-blue-600' },
+    { id: 'Finance', icon: DollarSign, color: 'text-black' },
+    { id: 'HR', icon: Users, color: 'text-[#172D9D]' },
     { id: 'Legal', icon: Scale, color: 'text-purple-600' },
     { id: 'Contracts', icon: FileContract, color: 'text-orange-600' },
     { id: 'Technical Reports', icon: FileText, color: 'text-indigo-600' },
@@ -54,54 +59,64 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
         <div className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden" onClick={onToggle} />
       )}
       
-      <div className={`fixed lg:relative z-30 h-full bg-white border-r border-gray-200 transition-all duration-300 ${
+      <div className={`fixed lg:relative z-30 h-full bg-sidebar-dark text-white border-r border-border-subtle/10 transition-all duration-300 ${
         collapsed ? '-translate-x-full lg:translate-x-0 lg:w-16' : 'w-80 lg:w-80'
-      }`}>
-        <div className="p-4 border-b border-gray-200">
+      }`} style={{ overflow: 'hidden' }}>
+        <div className="p-4 border-b border-border-subtle/10">
           <div className="flex items-center justify-between">
             {!collapsed && (
               <div className="flex items-center">
-                <div className="bg-[#0C2C47] p-2 rounded-lg mr-3">
-                  <FileText className="h-7 w-7 text-white" />
-                </div>
-                <h1 className="text-xl font-bold text-[#0C2C47]">Cognifile</h1>
+                <img src={logo} alt="Cognifile Logo" className="h-8 w-8 object-contain mr-3" />
+                <h1 className="text-xl font-bold text-white">Cognifile</h1>
               </div>
             )}
             <button
               onClick={onToggle}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-sidebar-soft rounded-lg transition-colors"
             >
-              {collapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5 lg:hidden" />}
+              {collapsed ? <Menu className="h-5 w-5 text-white" /> : <X className="h-5 w-5 text-white lg:hidden" />}
             </button>
           </div>
           
-          {!collapsed && user && (
-            <div className="mt-4 p-3 bg-[#E4F2EA] rounded-lg">
-              <p className="text-sm font-medium text-[#0C2C47]">{user.username}</p>
-              <p className="text-xs text-[#2D5652]">{user.role} Role</p>
-            </div>
-          )}
+            {/* User info moved to header */}
         </div>
 
         <nav className="p-4 space-y-2 overflow-y-auto h-full pb-20">
           <div className="space-y-2">
-            <button className="w-full flex items-center px-3 py-2.5 text-[#0C2C47] bg-[#E4F2EA] rounded-lg hover:bg-[#97D3CD] transition-colors">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onHomeClick();
+                if (window.location.pathname !== '/dashboard') {
+                  navigate('/dashboard');
+                }
+
+                if (window.innerWidth < 1024) {
+                  onToggle();
+                }
+              }}
+              className="w-full flex items-center px-3 py-2.5 text-white bg-transparent rounded-lg hover:bg-sidebar-soft transition-colors"
+            >
               <Home className="h-6 w-6" />
               {!collapsed && <span className="ml-3 font-medium">Home</span>}
             </button>
             
-            <button 
-              onClick={() => window.dispatchEvent(new CustomEvent('openUploadModal'))}
-              className="w-full flex items-center px-3 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Upload className="h-6 w-6 text-green-600" />
-              {!collapsed && <span className="ml-3 font-medium">Upload Document</span>}
-            </button>
-            
+            {/* Upload button moved to appear after Home */}
+            <div className="mt-2">
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('openUploadModal'))}
+                className="w-full flex items-center px-3 py-2 text-white bg-primary hover:bg-primary-700 rounded-lg transition-colors"
+              >
+                <Upload className="h-5 w-5" />
+                {!collapsed && <span className="ml-3 font-medium">Upload Document</span>}
+              </button>
+            </div>
             <div className="space-y-1">
               <button
                 onClick={() => toggleFolder('documents')}
-                className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full flex items-center px-3 py-2 text-white hover:bg-sidebar-soft rounded-lg transition-colors"
               >
                 <FolderOpen className="h-5 w-5" />
                 {!collapsed && (
@@ -124,8 +139,8 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
                       onClick={() => onCategorySelect(selectedCategory === category.id ? '' : category.id)}
                       className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
                         selectedCategory === category.id 
-                          ? 'bg-[#97D3CD] text-[#0C2C47] font-medium' 
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-sidebar-soft border-l-4 border-primary text-white font-medium' 
+                          : 'text-white hover:bg-sidebar-soft hover:bg-opacity-50'
                       }`}
                     >
                       <category.icon className={`h-4 w-4 ${category.color}`} />
@@ -136,17 +151,37 @@ export default function Sidebar({ collapsed, onToggle, selectedCategory, onCateg
               )}
             </div>
             
-            <button className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Share2 className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Shared w/ me</span>}
-            </button>
+            <div className="space-y-1">
+              <button className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                <Share2 className="h-5 w-5" />
+                {!collapsed && <span className="ml-3">Shared w/ me</span>}
+              </button>
+            </div>
           </div>
           
-          <div className="pt-4 border-t border-gray-200">
-            <button className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Settings className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Settings</span>}
-            </button>
+          <div className="pt-4 border-t border-border-subtle/10">
+            <div>
+              <button
+                onClick={() => setSettingsOpen(prev => !prev)}
+                className="w-full flex items-center px-3 py-2 text-white hover:bg-sidebar-soft rounded-lg transition-colors"
+              >
+                <Settings className="h-5 w-5" />
+                {!collapsed && <span className="ml-3">Settings</span>}
+              </button>
+
+              {!collapsed && settingsOpen && (
+                <button
+                  onClick={() => {
+                    // call logout then navigate to login
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center px-3 py-2 mt-2 text-danger hover:bg-danger/10 rounded-lg transition-colors font-semibold"
+                >
+                  <span className="ml-3">Logout</span>
+                </button>
+              )}
+            </div>
           </div>
         </nav>
       </div>
